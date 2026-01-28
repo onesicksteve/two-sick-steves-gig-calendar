@@ -120,6 +120,7 @@ const venueMiles = el("venueMiles");
 const venueStart = el("venueStart");
 const venueEnd = el("venueEnd");
 const venueNotes = el("venueNotes");
+const btnCancelVenue = el("btnCancelVenue");
 
 const btnExport = el("btnExport");
 const btnImport = el("btnImport");
@@ -526,6 +527,8 @@ btnHideAll.addEventListener("click", ()=>{ showAllGigs(false); });
 
 btnNewVenue.addEventListener("click", openVenueDialog);
 venueDialog.addEventListener("close", ()=>{ if(venueDialog.returnValue==="ok") saveVenueFromDialog(); });
+venueDialog.addEventListener("cancel", (e)=>{ e.preventDefault(); venueDialog.close("cancel"); });
+btnCancelVenue.addEventListener("click", ()=>{ venueDialog.close("cancel"); });
 
 venueSelect.addEventListener("change", ()=>{ applyVenueDefaults(); renderCalc(); });
 useOverrideMiles.addEventListener("change", ()=>{ applyVenueDefaults(); renderCalc(); });
