@@ -547,7 +547,11 @@ btnNewGigTop.addEventListener("click", ()=>{
   setTimeout(()=>{
     document.getElementById("formCard")?.scrollIntoView({behavior:"smooth", block:"start"});
   }, 50);
-}); scrollToForm(); });
+});
+setTimeout(()=>{
+    document.getElementById("formCard")?.scrollIntoView({behavior:"smooth", block:"start"});
+  }, 50);
+}); 
 
 
 btnNewVenue.addEventListener("click", openVenueDialog);
