@@ -406,8 +406,6 @@ function renderUpcoming(){
       `;
     upcomingList.appendChild(item);
   }
-
-  });
 }
 
 function renderGigList(){
@@ -548,12 +546,6 @@ btnNewGigTop.addEventListener("click", ()=>{
     document.getElementById("formCard")?.scrollIntoView({behavior:"smooth", block:"start"});
   }, 50);
 });
-setTimeout(()=>{
-    document.getElementById("formCard")?.scrollIntoView({behavior:"smooth", block:"start"});
-  }, 50);
-}); 
-
-
 btnNewVenue.addEventListener("click", openVenueDialog);
 venueDialog.addEventListener("close", ()=>{ if(venueDialog.returnValue==="ok") saveVenueFromDialog(); });
 venueDialog.addEventListener("cancel", (e)=>{ e.preventDefault(); venueDialog.close("cancel"); });
