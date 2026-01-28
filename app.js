@@ -5,7 +5,7 @@ const PEOPLE = { A: "Steve White", B: "Steve Watson-Jones" };
 const SETTINGS = {
   base: "Colwyn Bay",
   mileageRate: 0.45,
-  upcomingCount: 10,
+  upcomingCount: 3,
   bands: [
     { name: "Local", min: 0, max: 20, minimumFee: 250 },
     { name: "Travel", min: 21, max: 50, minimumFee: 300 },
@@ -74,9 +74,7 @@ const todayLabel = el("todayLabel");
 const upcomingList = el("upcomingList");
 const btnNewGigTop = el("btnNewGigTop");
 const btnShareWhatsApp = el("btnShareWhatsApp");
-const btnShowAll = el("btnShowAll");
 const allGigsCard = el("allGigsCard");
-const btnHideAll = el("btnHideAll");
 const search = el("search");
 const sort = el("sort");
 const gigList = el("gigList");
@@ -128,6 +126,8 @@ const btnCancelVenue = el("btnCancelVenue");
 
 const btnExport = el("btnExport");
 const btnImport = el("btnImport");
+const btnManage = el("btnManage");
+const manageView = el("manageView");
 const importFile = el("importFile");
 
 const installBanner = el("installBanner");
@@ -169,6 +169,10 @@ function applyVenueDefaults(){
   else { oneWayMiles.disabled=false; }
   if(!startTime.value && v.usualStart) startTime.value=v.usualStart;
   if(!endTime.value && v.usualEnd) endTime.value=v.usualEnd;
+  // Suggested fee: last paid fee at this venue
+  if(feeType && feeType.value==="paid" && (!fee.value || Number(fee.value)<=0) && v.lastFee && Number(v.lastFee)>0){
+    fee.value = String(Math.round(Number(v.lastFee)));
+  }
 }
 
 function renderBandAndWarnings(){
@@ -328,6 +332,7 @@ function saveGig(){
   // store venue usual times
   v.usualStart = startTime.value || v.usualStart || "";
   v.usualEnd = endTime.value || v.usualEnd || "";
+  if(!isFree && feeVal>0){ v.lastFee = feeVal; }
   const vIdx = state.venues.findIndex(x=>x.id===v.id);
   if(vIdx>=0) state.venues[vIdx]=v;
 
@@ -393,20 +398,15 @@ function renderUpcoming(){
           <div class="title">${isoToDDMMYYYY(g.date)}${timeRange ? " • " + timeRange : ""}</div>
           <div class="meta">${vName}</div>
         </div>
-        <div class="pill">£${g.fee}</div>
+        ${g.isFree ? `<div class="tag-free">FREE</div>` : `<div class="pill">£${g.fee}</div>`}
       </div>
       <div class="nums">
-        <div>${PEOPLE.A}: <strong>£${g.payoutA}</strong> • ${PEOPLE.B}: <strong>£${g.payoutB}</strong></div>
+        <div>${g.isFree ? "<strong>Free gig</strong>" : `${PEOPLE.A}: <strong>£${g.payoutA}</strong> • ${PEOPLE.B}: <strong>£${g.payoutB}</strong>`}</div>
       </div>
-      <div class="buttons">
-        <button class="btn btn-secondary" type="button" data-edit="${g.id}">Edit</button>
-      </div>
-    `;
+      `;
     upcomingList.appendChild(item);
   }
 
-  upcomingList.querySelectorAll("[data-edit]").forEach(btn=>{
-    btn.addEventListener("click", ()=>loadGigIntoForm(btn.getAttribute("data-edit")));
   });
 }
 
@@ -440,26 +440,23 @@ function renderGigList(){
     item.innerHTML=`
       <div class="top">
         <div>
-          <div class="title">${escapeHtml(g.venueName)}${g.cancelled ? " (Cancelled)" : ""}</div>
+          <div class="title">${escapeHtml(g.venueName)}${g.cancelled ? " (Cancelled)" : ""}${g.isFree ? " (FREE)" : ""}</div>
           <div class="meta">${isoToDDMMYYYY(g.date)}${timeRange ? " • " + timeRange : ""} • Fee £${g.fee} • ${g.paymentMethod} • One-way ${g.oneWayMiles}mi${g.overrideMiles ? " (manual)" : ""}</div>
         </div>
         <div class="pill">Driver: ${g.driverKey==="A"?PEOPLE.A:PEOPLE.B}</div>
       </div>
       <div class="nums">
         <div>Round trip: <strong>${g.roundTripMiles}</strong> mi • Mileage: <strong>£${g.mileagePayout}</strong></div>
-        <div>${PEOPLE.A}: <strong>£${g.payoutA}</strong> • ${PEOPLE.B}: <strong>£${g.payoutB}</strong></div>
+        <div>${g.isFree ? "<strong>Free gig</strong>" : `${PEOPLE.A}: <strong>£${g.payoutA}</strong> • ${PEOPLE.B}: <strong>£${g.payoutB}</strong>`}</div>
       </div>
       ${g.notes ? `<div class="meta">Notes: ${escapeHtml(g.notes)}</div>` : ""}
-      <div class="buttons">
-        <button class="btn btn-secondary" type="button" data-edit="${g.id}">Edit</button>
-        <button class="btn btn-danger" type="button" data-del="${g.id}">Delete</button>
-      </div>
-    `;
+      `;
     gigList.appendChild(item);
   }
 
   gigList.querySelectorAll("[data-edit]").forEach(btn=>btn.addEventListener("click", ()=>loadGigIntoForm(btn.getAttribute("data-edit"))));
   gigList.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click", ()=>deleteGig(btn.getAttribute("data-del"))));
+  gigList.querySelectorAll("[data-dup]").forEach(btn=>btn.addEventListener("click", ()=>duplicateGig(btn.getAttribute("data-dup"))));
 }
 
 function openVenueDialog(){
@@ -513,10 +510,6 @@ function importJSON(file){
   reader.readAsText(file);
 }
 
-function showAllGigs(show){
-  if(show) allGigsCard.classList.remove("hidden");
-  else allGigsCard.classList.add("hidden");
-}
 
 function clearAllData(){
   if(!confirm("Clear ALL gigs and venues from this phone?")) return;
@@ -551,8 +544,6 @@ btnInstall.addEventListener("click", async ()=>{
 // Events
 btnNewGigTop.addEventListener("click", ()=>{ setDefaultForm(); scrollToForm(); });
 
-btnShowAll.addEventListener("click", ()=>{ showAllGigs(true); allGigsCard.scrollIntoView({behavior:"smooth"}); });
-btnHideAll.addEventListener("click", ()=>{ showAllGigs(false); });
 
 btnNewVenue.addEventListener("click", openVenueDialog);
 venueDialog.addEventListener("close", ()=>{ if(venueDialog.returnValue==="ok") saveVenueFromDialog(); });
@@ -585,18 +576,14 @@ btnDismissBanner.addEventListener("click", dismissBanner);
 // Init
 todayLabel.textContent = isoToDDMMYYYY(todayIso());
 
-if(!state.venues.length){
-  // One example venue to make first-run easier; delete it if you want.
-  state.venues.push({ id: uid(), name: "Blue Bell (example)", oneWayMiles: 10, usualStart: "20:00", usualEnd: "23:00", notes: "" });
-  saveState();
-}
 
 renderVenueSelect();
-venueSelect.value = state.venues[0].id;
+if(state.venues.length){ venueSelect.value = state.venues[0].id; }
 
 setDefaultForm();
 renderUpcoming();
 renderGigList();
+setManageMode(false);
 maybeShowBanner();
 
 if ("serviceWorker" in navigator) {
@@ -676,3 +663,54 @@ feeType.addEventListener("change", ()=>{
   }
   renderCalc();
 });
+
+// Suggested fee: last paid fee when switching to paid
+if (feeType){
+  feeType.addEventListener("change", ()=>{
+    const v = getSelectedVenue();
+    if(feeType.value==="paid"){
+      if(v && v.lastFee && Number(v.lastFee)>0 && (!fee.value || Number(fee.value)<=0)){
+        fee.value = String(Math.round(Number(v.lastFee)));
+      }
+    }
+  });
+}
+
+let manageMode = false;
+function setManageMode(on){
+  manageMode = !!on;
+  if(manageView){
+    if(manageMode) manageView.classList.remove("hidden");
+    else manageView.classList.add("hidden");
+  }
+  if(btnManage){
+    btnManage.textContent = manageMode ? "Home" : "Edit";
+    btnManage.className = manageMode ? "btn btn-secondary" : "btn btn-primary";
+  }
+  // When entering manage, scroll to top of manage area
+  if(manageMode){
+    manageView?.scrollIntoView({behavior:"smooth", block:"start"});
+  } else {
+    document.querySelector(".container")?.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+}
+
+if(btnManage){
+  btnManage.addEventListener("click", ()=> setManageMode(!manageMode));
+}
+
+function duplicateGig(id){
+  const g = state.gigs.find(x=>x.id===id);
+  if(!g) return;
+  const copy = { ...g };
+  copy.id = uid();
+  copy.date = todayIso(); // user can change
+  copy.createdAt = Date.now();
+  copy.updatedAt = Date.now();
+  // Keep last payouts etc as-is; saveGig recalculates when edited; but we keep for quick view.
+  state.gigs.push(copy);
+  saveState();
+  renderUpcoming();
+  renderGigList();
+  loadGigIntoForm(copy.id);
+}

@@ -14,12 +14,13 @@
       <img src="logo.png" alt="Two Sick Steves logo" class="logo" />
       <div>
         <h1>Gig Calendar</h1>
-        <p class="sub">Two Sick Steves • Upcoming (next 10) • Colwyn Bay base</p>
+        <p class="sub">Two Sick Steves • Upcoming (next 3) • Colwyn Bay base</p>
       </div>
     </div>
 
     <div class="header-actions">
       <button id="btnInstall" class="btn btn-secondary hidden" type="button">Install</button>
+      <button id="btnManage" class="btn btn-primary" type="button">Edit</button>
       <button id="btnExport" class="btn btn-secondary" type="button">Export</button>
       <button id="btnImport" class="btn btn-secondary" type="button">Import</button>
       <input id="importFile" type="file" accept="application/json" class="hidden" />
@@ -44,9 +45,9 @@
       </div>
       <div class="tiny muted">Shows gigs from <span id="todayLabel"></span> onward. Cancelled gigs are hidden here.</div>
       <div id="upcomingList" class="list"></div>
+      <div id="homeHint" class="tiny muted">Editing, venues, duplicates, and history live in Edit.</div>
       <div class="row space">
-        <button id="btnShowAll" class="btn btn-secondary" type="button">Show all gigs</button>
-      <div id="saveMsg" class="ok hidden"></div>
+        <div id="saveMsg" class="ok hidden"></div>
 
       <div id="postSaveBar" class="post-save hidden">
         <div class="row space">
@@ -57,11 +58,12 @@
 
     </section>
 
-    <section id="allGigsCard" class="card hidden">
+    <div id="manageView" class="hidden">
+
+    <section id="allGigsCard" class="card">
       <div class="row space">
         <h2>All gigs</h2>
-        <button id="btnHideAll" class="btn btn-secondary" type="button">Hide</button>
-      </div>
+        </div>
 
       <div class="row space">
         <input id="search" type="text" placeholder="Search venue / notes" />
@@ -245,6 +247,8 @@
       </div>
 
     </section>
+
+</div>
   </main>
 
   <dialog id="venueDialog">

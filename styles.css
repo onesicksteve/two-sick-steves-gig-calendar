@@ -216,3 +216,14 @@ dialog::backdrop{
   border: 1px solid rgba(124,255,178,.35);
   background: rgba(124,255,178,.10);
 }
+
+/* Tags */
+.tag-free{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  font-size:12px;
+  white-space:nowrap;
+}
