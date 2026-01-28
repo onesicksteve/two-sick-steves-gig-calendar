@@ -252,7 +252,7 @@ function setDefaultForm(){
   renderCalc();
 }
 
-function scrollToForm(){ formCard.scrollIntoView({behavior:"smooth", block:"start"}); }
+function scrollToForm(){ formCard.scrollIntoView(true); }
 
 function loadGigIntoForm(id){
   const g=state.gigs.find(x=>x.id===id); if(!g) return;
@@ -345,7 +345,7 @@ function saveGig(){
   editingGigId=null;
   if(gig.date >= todayIso()) showPostSaveBar();
 
-  document.querySelector(".container")?.scrollIntoView({behavior:"smooth", block:"start"});
+  document.querySelector(".container")?.scrollIntoView(true);
 }
 
 function deleteGig(id){
@@ -543,7 +543,8 @@ btnInstall.addEventListener("click", async ()=>{
 btnNewGigTop.addEventListener("click", ()=>{
   setManageMode(true);
   setTimeout(()=>{
-    document.getElementById("formCard")?.scrollIntoView({behavior:"smooth", block:"start"});
+    const fc = document.getElementById("formCard");
+    if(fc && fc.scrollIntoView) fc.scrollIntoView(true);
   }, 50);
 });
 btnNewVenue.addEventListener("click", openVenueDialog);
@@ -688,12 +689,15 @@ function setManageMode(on){
     btnManage.textContent = manageMode ? "Home" : "Edit";
     btnManage.className = manageMode ? "btn btn-secondary" : "btn btn-primary";
   }
-  // When entering manage, scroll to top of manage area
-  if(manageMode){
-    manageView?.scrollIntoView({behavior:"smooth", block:"start"});
-  } else {
-    document.querySelector(".container")?.scrollIntoView({behavior:"smooth", block:"start"});
-  }
+  // Keep it compatible: no scroll options object
+  try{
+    if(manageMode && manageView && manageView.scrollIntoView){
+      manageView.scrollIntoView(true);
+    } else if(!manageMode){
+      const c = document.querySelector(".container");
+      if(c && c.scrollIntoView) c.scrollIntoView(true);
+    }
+  }catch(e){}
 }
 
 if(btnManage){
