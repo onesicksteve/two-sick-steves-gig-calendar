@@ -542,7 +542,12 @@ btnInstall.addEventListener("click", async ()=>{
 });
 
 // Events
-btnNewGigTop.addEventListener("click", ()=>{ setDefaultForm(); scrollToForm(); });
+btnNewGigTop.addEventListener("click", ()=>{
+  setManageMode(true);
+  setTimeout(()=>{
+    document.getElementById("formCard")?.scrollIntoView({behavior:"smooth", block:"start"});
+  }, 50);
+}); scrollToForm(); });
 
 
 btnNewVenue.addEventListener("click", openVenueDialog);
