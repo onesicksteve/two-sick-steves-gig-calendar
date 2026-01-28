@@ -73,7 +73,6 @@ const el = (id) => document.getElementById(id);
 const todayLabel = el("todayLabel");
 const upcomingList = el("upcomingList");
 const btnNewGigTop = el("btnNewGigTop");
-const btnNewGigBottom = el("btnNewGigBottom");
 const btnShowAll = el("btnShowAll");
 const allGigsCard = el("allGigsCard");
 const btnHideAll = el("btnHideAll");
@@ -521,7 +520,6 @@ btnInstall.addEventListener("click", async ()=>{
 
 // Events
 btnNewGigTop.addEventListener("click", ()=>{ setDefaultForm(); scrollToForm(); });
-btnNewGigBottom.addEventListener("click", ()=>{ setDefaultForm(); scrollToForm(); });
 
 btnShowAll.addEventListener("click", ()=>{ showAllGigs(true); allGigsCard.scrollIntoView({behavior:"smooth"}); });
 btnHideAll.addEventListener("click", ()=>{ showAllGigs(false); });
