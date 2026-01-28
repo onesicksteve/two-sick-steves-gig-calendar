@@ -205,3 +205,14 @@ dialog::backdrop{
   background: rgba(0,0,0,.65);
   backdrop-filter: blur(2px);
 }
+
+/* Post-save action strip */
+.post-save{
+  position: sticky;
+  bottom: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(124,255,178,.35);
+  background: rgba(124,255,178,.10);
+}

@@ -73,6 +73,7 @@ const el = (id) => document.getElementById(id);
 const todayLabel = el("todayLabel");
 const upcomingList = el("upcomingList");
 const btnNewGigTop = el("btnNewGigTop");
+const btnShareWhatsApp = el("btnShareWhatsApp");
 const btnShowAll = el("btnShowAll");
 const allGigsCard = el("allGigsCard");
 const btnHideAll = el("btnHideAll");
@@ -113,6 +114,8 @@ const personBAmount = el("personBAmount");
 const btnSaveGig = el("btnSaveGig");
 const btnClearForm = el("btnClearForm");
 const saveMsg = el("saveMsg");
+const postSaveBar = el("postSaveBar");
+const btnSendToSteve = el("btnSendToSteve");
 
 const venueDialog = el("venueDialog");
 const venueName = el("venueName");
@@ -310,6 +313,7 @@ function saveGig(){
   saveMsg.classList.remove("hidden");
   saveMsg.textContent = editingGigId ? "Gig updated." : "Gig saved.";
   editingGigId=null;
+  if(gig.date >= todayIso()) showPostSaveBar();
 
   document.querySelector(".container")?.scrollIntoView({behavior:"smooth", block:"start"});
 }
@@ -572,4 +576,62 @@ maybeShowBanner();
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+}
+
+
+function buildWhatsAppMessage(){
+  const t = todayIso();
+  const gigs = state.gigs
+    .filter(g => (g.date||"") >= t)
+    .filter(g => g.cancelled !== true)
+    .slice()
+    .sort((a,b)=>(a.date||"").localeCompare(b.date||"") || (a.startTime||"").localeCompare(b.startTime||""))
+    .slice(0, SETTINGS.upcomingCount);
+
+  if(!gigs.length){
+    return "Two Sick Steves – Upcoming gigs\n\n(No upcoming gigs saved)";
+  }
+
+  let lines = [];
+  lines.push("Two Sick Steves – Upcoming gigs\n");
+
+  for(const g of gigs){
+    const vName = venueNameById(g.venueId);
+    const timeRange = formatTimeRange(g.startTime, g.endTime);
+    // Determine Steve Watson-Jones share (Person B)
+    const yourShare = g.payoutB;
+
+    lines.push(`${isoToDDMMYYYY(g.date)}`);
+    lines.push(`${vName}`);
+    if(timeRange) lines.push(`${timeRange}`);
+    lines.push(`Your share: £${yourShare}`);
+    lines.push(""); // blank line between gigs
+  }
+
+  return lines.join("\n").trim();
+}
+
+
+btnShareWhatsApp.addEventListener("click", ()=>{
+  const msg = buildWhatsAppMessage();
+  const url = "https://wa.me/447544147085?text=" + encodeURIComponent(msg);
+  window.open(url, "_blank");
+});
+
+
+function showPostSaveBar(){
+  if(!postSaveBar) return;
+  postSaveBar.classList.remove("hidden");
+  // auto-hide after ~5 seconds
+  setTimeout(()=>{ postSaveBar.classList.add("hidden"); }, 5000);
+}
+
+
+if (btnSendToSteve){
+  btnSendToSteve.addEventListener("click", ()=>{
+    const msg = buildWhatsAppMessage();
+    const url = "https://wa.me/447544147085?text=" + encodeURIComponent(msg);
+    window.open(url, "_blank");
+    postSaveBar.classList.add("hidden");
+  });
 }
