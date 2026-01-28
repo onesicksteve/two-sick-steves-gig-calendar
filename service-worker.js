@@ -1,4 +1,4 @@
-const CACHE_NAME = "tss-gig-calendar-v14";
+const CACHE_NAME = "tss-gig-calendar-v17";
 const ASSETS = [
   "./",
   "./index.html",

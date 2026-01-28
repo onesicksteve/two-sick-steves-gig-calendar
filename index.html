@@ -85,9 +85,15 @@
 
         <label>
           Venue
-          <div class="row">
-            <select id="venueSelect"></select>
-            <button id="btnNewVenue" class="btn btn-secondary" type="button">+ Venue</button>
+          <div class="row space">
+            <div class="row" style="flex:1; gap:10px;">
+              <select id="venueSelect" style="flex:1;"></select>
+              <button id="btnNewVenue" class="btn btn-secondary" type="button">+ Venue</button>
+            </div>
+            <label class="toggle" style="margin-left:auto;">
+              <input id="lockVenueDefaults" type="checkbox" />
+              <span>Lock times & fee</span>
+            </label>
           </div>
         </label>
 

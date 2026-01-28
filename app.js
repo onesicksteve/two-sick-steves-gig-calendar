@@ -84,6 +84,7 @@ const formCard = el("formCard");
 const formTitle = el("formTitle");
 const gigDate = el("gigDate");
 const venueSelect = el("venueSelect");
+const lockVenueDefaults = el("lockVenueDefaults");
 const btnNewVenue = el("btnNewVenue");
 const startTime = el("startTime");
 const endTime = el("endTime");
@@ -167,11 +168,13 @@ function applyVenueDefaults(){
   const v=getSelectedVenue(); if(!v) return;
   if(!useOverrideMiles.checked){ oneWayMiles.value=String(Math.round(v.oneWayMiles||0)); oneWayMiles.disabled=true; }
   else { oneWayMiles.disabled=false; }
-  if(!startTime.value && v.usualStart) startTime.value=v.usualStart;
-  if(!endTime.value && v.usualEnd) endTime.value=v.usualEnd;
-  // Suggested fee: last paid fee at this venue
-  if(feeType && feeType.value==="paid" && (!fee.value || Number(fee.value)<=0) && v.lastFee && Number(v.lastFee)>0){
-    fee.value = String(Math.round(Number(v.lastFee)));
+  if(!(lockVenueDefaults && lockVenueDefaults.checked)){
+    if(v.usualStart) startTime.value=v.usualStart;
+    if(v.usualEnd) endTime.value=v.usualEnd;
+    // Suggested fee: last paid fee at this venue
+    if(feeType && feeType.value==="paid" && v.lastFee && Number(v.lastFee)>0){
+      fee.value = String(Math.round(Number(v.lastFee)));
+    }
   }
 }
 
@@ -205,7 +208,7 @@ function renderCalc(){
   personBLabel.textContent=PEOPLE.B;
 
   let feeVal=Math.round(Number(fee.value||0));
-  const isFree = (feeType && feeType.value==="free") || feeVal===0;
+  const isFree = (feeType && feeType.value==="free");
   if(isFree){ feeVal = 0; }
   const ow=Math.round(Number(oneWayMiles.value||0));
   const drv=driver.value||"A";
@@ -239,6 +242,7 @@ function renderCalc(){
 }
 
 function setDefaultForm(){
+  if(lockVenueDefaults) lockVenueDefaults.checked=false;
   editingGigId=null;
   formTitle.textContent="New gig";
   gigDate.value=todayIso();
@@ -281,7 +285,7 @@ function saveGig(){
   if(!v){ saveMsg.classList.remove("hidden"); saveMsg.textContent="Add/select a venue first."; return; }
   const date=gigDate.value;
   let feeVal=Math.round(Number(fee.value||0));
-  const isFree = (feeType && feeType.value==="free") || feeVal===0;
+  const isFree = (feeType && feeType.value==="free");
   if(isFree){ feeVal = 0; }
   if(!date || !feeVal || feeVal<=0){ saveMsg.classList.remove("hidden"); saveMsg.textContent="Enter at least a date and a fee."; return; }
 
@@ -650,12 +654,6 @@ if (btnSendToSteve){
   });
 }
 
-fee.addEventListener("input", ()=>{
-  if(Number(fee.value)===0){
-    feeType.value="free";
-    fee.disabled=true;
-  }
-});
 feeType.addEventListener("change", ()=>{
   if(feeType.value==="free"){
     fee.value="0";
