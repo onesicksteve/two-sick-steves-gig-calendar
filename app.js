@@ -678,7 +678,7 @@ if (feeType){
   });
 }
 
-let manageMode = false;
+var manageMode = false;
 function setManageMode(on){
   manageMode = !!on;
   if(manageView){
