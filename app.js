@@ -540,7 +540,7 @@ btnInstall.addEventListener("click", async ()=>{
 });
 
 // Events
-btnNewGigTop.addEventListener("click", ()=>{
+if(btnNewGigTop) btnNewGigTop.addEventListener("click", ()=>{
   setManageMode(true);
   setTimeout(()=>{
     const fc = document.getElementById("formCard");
@@ -626,7 +626,7 @@ function buildWhatsAppMessage(){
 }
 
 
-btnShareWhatsApp.addEventListener("click", ()=>{
+if(btnShareWhatsApp) btnShareWhatsApp.addEventListener("click", ()=>{
   const msg = buildWhatsAppMessage();
   const url = "https://wa.me/447544147085?text=" + encodeURIComponent(msg);
   window.open(url, "_blank");
