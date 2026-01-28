@@ -90,6 +90,7 @@ const btnNewVenue = el("btnNewVenue");
 const startTime = el("startTime");
 const endTime = el("endTime");
 const fee = el("fee");
+const feeType = el("feeType");
 const feeWarn = el("feeWarn");
 const clashWarn = el("clashWarn");
 const paymentMethod = el("paymentMethod");
@@ -199,10 +200,19 @@ function renderCalc(){
   personALabel.textContent=PEOPLE.A;
   personBLabel.textContent=PEOPLE.B;
 
-  const feeVal=Math.round(Number(fee.value||0));
+  let feeVal=Math.round(Number(fee.value||0));
+  const isFree = (feeType && feeType.value==="free") || feeVal===0;
+  if(isFree){ feeVal = 0; }
   const ow=Math.round(Number(oneWayMiles.value||0));
   const drv=driver.value||"A";
 
+  if(isFree){
+    roundTripMiles.textContent="—"; mileagePayout.textContent="—"; remainingAfterMileage.textContent="—"; baseSplitRaw.textContent="—";
+    personAAmount.textContent="£0"; personBAmount.textContent="£0";
+    distanceBandPill.textContent="Free gig";
+    minFeeWarn.classList.add("hidden"); feeWarn.classList.add("hidden"); clashWarn.classList.add("hidden");
+    return;
+  }
   if(!feeVal || feeVal<=0){
     roundTripMiles.textContent="—"; mileagePayout.textContent="—"; remainingAfterMileage.textContent="—"; baseSplitRaw.textContent="—";
     personAAmount.textContent="—"; personBAmount.textContent="—";
@@ -263,7 +273,9 @@ function saveGig(){
   const v=getSelectedVenue();
   if(!v){ saveMsg.classList.remove("hidden"); saveMsg.textContent="Add/select a venue first."; return; }
   const date=gigDate.value;
-  const feeVal=Math.round(Number(fee.value||0));
+  let feeVal=Math.round(Number(fee.value||0));
+  const isFree = (feeType && feeType.value==="free") || feeVal===0;
+  if(isFree){ feeVal = 0; }
   if(!date || !feeVal || feeVal<=0){ saveMsg.classList.remove("hidden"); saveMsg.textContent="Enter at least a date and a fee."; return; }
 
   const ow=Math.max(0,Math.round(Number(oneWayMiles.value||0)));
@@ -273,6 +285,7 @@ function saveGig(){
   const payoutB = res.driverKey==="B" ? res.driverTotalRounded : res.otherTotal;
 
   const gig={
+    isFree: isFree,
     id: editingGigId || uid(),
     date,
     venueId: v.id,
@@ -635,3 +648,19 @@ if (btnSendToSteve){
     postSaveBar.classList.add("hidden");
   });
 }
+
+fee.addEventListener("input", ()=>{
+  if(Number(fee.value)===0){
+    feeType.value="free";
+    fee.disabled=true;
+  }
+});
+feeType.addEventListener("change", ()=>{
+  if(feeType.value==="free"){
+    fee.value="0";
+    fee.disabled=true;
+  } else {
+    fee.disabled=false;
+  }
+  renderCalc();
+});
