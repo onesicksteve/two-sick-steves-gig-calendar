@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Two Sick Steves — Gig Calendar</title>
+  <meta name="theme-color" content="#0b1020" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="logo.png" alt="Two Sick Steves logo" class="logo" />
+      <div>
+        <h1>Gig Calendar</h1>
+        <p class="sub">Two Sick Steves • Upcoming (next 10) • Colwyn Bay base</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="btnInstall" class="btn btn-secondary hidden" type="button">Install</button>
+      <button id="btnExport" class="btn btn-secondary" type="button">Export</button>
+      <button id="btnImport" class="btn btn-secondary" type="button">Import</button>
+      <input id="importFile" type="file" accept="application/json" class="hidden" />
+    </div>
+  </header>
+
+  <main class="container">
+
+    <section id="installBanner" class="banner hidden">
+      <div>
+        <strong>Add to Home Screen</strong>
+        <div class="tiny">In Chrome: ⋮ → Add to Home screen. This makes it feel like a real app.</div>
+      </div>
+      <button id="btnDismissBanner" class="btn btn-secondary" type="button">Dismiss</button>
+    </section>
+
+    <section class="card">
+      <div class="row space">
+        <h2>Upcoming gigs</h2>
+        <button id="btnNewGigTop" class="btn btn-primary" type="button">+ New gig</button>
+      </div>
+      <div class="tiny muted">Shows gigs from <span id="todayLabel"></span> onward. Cancelled gigs are hidden here.</div>
+      <div id="upcomingList" class="list"></div>
+      <div class="row space">
+        <button id="btnShowAll" class="btn btn-secondary" type="button">Show all gigs</button>
+        <button id="btnNewGigBottom" class="btn btn-primary" type="button">+ New gig</button>
+      </div>
+    </section>
+
+    <section id="allGigsCard" class="card hidden">
+      <div class="row space">
+        <h2>All gigs</h2>
+        <button id="btnHideAll" class="btn btn-secondary" type="button">Hide</button>
+      </div>
+
+      <div class="row space">
+        <input id="search" type="text" placeholder="Search venue / notes" />
+        <select id="sort">
+          <option value="dateDesc">Newest first</option>
+          <option value="dateAsc">Oldest first</option>
+          <option value="venueAsc">Venue A→Z</option>
+        </select>
+      </div>
+
+      <div id="gigList" class="list"></div>
+      <div class="row space">
+        <button id="btnClearAll" class="btn btn-danger" type="button">Clear all data</button>
+      </div>
+    </section>
+
+    <section id="formCard" class="card">
+      <div class="row space">
+        <h2 id="formTitle">New gig</h2>
+        <button id="btnClearForm" class="btn btn-secondary" type="button">Clear</button>
+      </div>
+
+      <div class="grid">
+        <label>
+          Date
+          <input id="gigDate" type="date" />
+          <div class="tiny muted">Displayed as DD-MM-YYYY in lists.</div>
+        </label>
+
+        <label>
+          Venue
+          <div class="row">
+            <select id="venueSelect"></select>
+            <button id="btnNewVenue" class="btn btn-secondary" type="button">+ Venue</button>
+          </div>
+        </label>
+
+        <label>
+          Start time
+          <input id="startTime" type="time" />
+        </label>
+
+        <label>
+          End time
+          <input id="endTime" type="time" />
+        </label>
+
+        <label>
+          Fee (£)
+          <input id="fee" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 300" />
+          <div id="feeWarn" class="warn hidden"></div>
+          <div id="clashWarn" class="warn hidden"></div>
+        </label>
+
+        <label>
+          Payment method
+          <select id="paymentMethod">
+            <option>Cash</option>
+            <option>Card</option>
+            <option>Bank transfer</option>
+            <option>Other</option>
+          </select>
+        </label>
+
+        <label>
+          Cancelled
+          <select id="cancelled">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+          <div class="tiny muted">Cancelled gigs stay in history but won’t show in Upcoming.</div>
+        </label>
+
+        <label>
+          Driver (gets mileage + rounding)
+          <select id="driver">
+            <option value="A">Steve White</option>
+            <option value="B">Steve Watson-Jones</option>
+          </select>
+        </label>
+
+        <label>
+          Notes (optional)
+          <input id="notes" type="text" placeholder="Parking, contact, sound issues…" />
+        </label>
+      </div>
+
+      <hr class="sep" />
+
+      <h3>Distance + minimum fee</h3>
+      <div class="grid">
+        <div>
+          <div class="row space">
+            <div class="muted">
+              One-way miles (Colwyn Bay → venue)
+              <div class="tiny">Used for distance band + minimum fee. Override affects everything.</div>
+            </div>
+            <label class="toggle">
+              <input id="useOverrideMiles" type="checkbox" />
+              <span>Override</span>
+            </label>
+          </div>
+
+          <div class="row">
+            <input id="oneWayMiles" type="number" inputmode="numeric" min="0" step="1" />
+            <span class="pill" id="distanceBandPill">—</span>
+          </div>
+
+          <div id="minFeeWarn" class="warn hidden"></div>
+        </div>
+
+        <div class="box">
+          <div class="kpi">
+            <span class="muted">Round trip miles</span>
+            <strong id="roundTripMiles">—</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">Mileage payout (£0.45/mi)</span>
+            <strong id="mileagePayout">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <h3>Cash split (locked rules)</h3>
+      <div class="grid">
+        <div class="box">
+          <div class="kpi">
+            <span class="muted">Remaining after mileage</span>
+            <strong id="remainingAfterMileage">—</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted">50/50 base split (raw)</span>
+            <strong id="baseSplitRaw">—</strong>
+          </div>
+          <div class="tiny muted">
+            Driver total is rounded to nearest £10. Other gets exact remainder so totals equal the fee.
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="kpi">
+            <span class="muted" id="personALabel">Steve White</span>
+            <strong id="personAAmount">—</strong>
+          </div>
+          <div class="kpi">
+            <span class="muted" id="personBLabel">Steve Watson-Jones</span>
+            <strong id="personBAmount">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="row actions">
+        <button id="btnSaveGig" class="btn btn-primary" type="button">Save gig</button>
+      </div>
+
+      <div id="saveMsg" class="ok hidden"></div>
+    </section>
+  </main>
+
+  <dialog id="venueDialog">
+    <form method="dialog" class="dialog">
+      <h2>Add / edit venue</h2>
+
+      <label>
+        Venue name
+        <input id="venueName" type="text" placeholder="e.g. Blue Bell" required />
+      </label>
+
+      <label>
+        One-way miles (Colwyn Bay → venue)
+        <input id="venueMiles" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 18" required />
+      </label>
+
+      <label>
+        Usual start time (optional)
+        <input id="venueStart" type="time" />
+      </label>
+
+      <label>
+        Usual end time (optional)
+        <input id="venueEnd" type="time" />
+      </label>
+
+      <label>
+        Venue notes (optional)
+        <input id="venueNotes" type="text" placeholder="Parking / load-in / who to ask for" />
+      </label>
+
+      <div class="row actions">
+        <button class="btn btn-primary" value="ok">Save venue</button>
+        <button class="btn btn-secondary" value="cancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

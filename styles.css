@@ -1,0 +1,198 @@
+:root{
+  --bg:#0b1020;
+  --card:#121a33;
+  --muted:#9fb0ff;
+  --text:#e8ecff;
+  --line:rgba(255,255,255,.12);
+  --warn:#ffcc66;
+  --ok:#7CFFB2;
+  --danger:#ff6b6b;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:linear-gradient(180deg, #070a14, var(--bg));
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+}
+
+.app-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:16px 16px 0;
+  flex-wrap:wrap;
+}
+
+.brand{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+.logo{
+  height:44px;
+  width:auto;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.04);
+}
+@media (max-width: 420px){
+  .logo{height:38px}
+}
+
+.header-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+h1{margin:0;font-size:22px}
+.sub{margin:4px 0 0;color:rgba(232,236,255,.75);font-size:13px}
+
+.container{
+  padding:16px;
+  display:grid;
+  gap:16px;
+  max-width:980px;
+  margin:0 auto;
+}
+
+.card{
+  background:rgba(18,26,51,.9);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+.banner{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(159,176,255,.25);
+  background:rgba(159,176,255,.06);
+}
+
+h2{margin:0 0 12px;font-size:18px}
+h3{margin:0 0 8px;font-size:15px;color:rgba(232,236,255,.9)}
+
+.grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:1fr;
+}
+
+@media(min-width:820px){
+  .grid{grid-template-columns:1fr 1fr}
+}
+
+label{display:grid;gap:6px;font-size:13px}
+input,select{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#0c1228;
+  color:var(--text);
+  outline:none;
+}
+
+input:focus,select:focus{border-color:rgba(159,176,255,.55)}
+.row{display:flex;gap:10px;align-items:center}
+.space{justify-content:space-between}
+.actions{margin-top:14px}
+
+.btn{
+  border:1px solid var(--line);
+  background:#0c1228;
+  color:var(--text);
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+}
+.btn-primary{background:#2b3cff;border-color:rgba(43,60,255,.6)}
+.btn-secondary{background:#0c1228}
+.btn-danger{background:#2a0f16;border-color:rgba(255,107,107,.35);color:#ffd2d2}
+
+.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
+
+.box{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(12,18,40,.55);
+}
+.kpi{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px}
+.kpi strong{font-size:18px}
+.muted{color:rgba(232,236,255,.75)}
+.tiny{font-size:12px;color:rgba(232,236,255,.65)}
+
+.pill{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.04);
+  font-size:12px;
+  white-space:nowrap;
+}
+
+.warn{
+  margin-top:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,204,102,.35);
+  background:rgba(255,204,102,.08);
+  color:var(--warn);
+  font-size:13px;
+}
+.ok{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(124,255,178,.35);
+  background:rgba(124,255,178,.08);
+  color:var(--ok);
+  font-size:13px;
+}
+.hidden{display:none}
+
+.toggle{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  font-size:13px;
+  user-select:none;
+}
+
+.list{display:grid;gap:10px;margin-top:12px}
+.item{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(12,18,40,.55);
+}
+.item .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.item .title{font-weight:650}
+.item .meta{font-size:12px;color:rgba(232,236,255,.7);margin-top:4px}
+.item .nums{margin-top:10px;display:grid;gap:4px;font-size:13px}
+.item .buttons{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+
+dialog{
+  border:none;
+  border-radius:18px;
+  padding:0;
+  width:min(520px, 92vw);
+  background:transparent;
+}
+.dialog{
+  background:rgba(18,26,51,.96);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:16px;
+}
