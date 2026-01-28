@@ -452,6 +452,11 @@ function renderGigList(){
         <div>${g.isFree ? "<strong>Free gig</strong>" : `${PEOPLE.A}: <strong>£${g.payoutA}</strong> • ${PEOPLE.B}: <strong>£${g.payoutB}</strong>`}</div>
       </div>
       ${g.notes ? `<div class="meta">Notes: ${escapeHtml(g.notes)}</div>` : ""}
+            <div class="buttons">
+        <button class="btn btn-secondary" type="button" data-edit="${g.id}">Edit</button>
+        <button class="btn btn-secondary" type="button" data-dup="${g.id}">Duplicate</button>
+        <button class="btn btn-danger" type="button" data-del="${g.id}">Delete</button>
+      </div>
       `;
     gigList.appendChild(item);
   }
@@ -614,15 +619,16 @@ function buildWhatsAppMessage(){
   lines.push("Two Sick Steves – Upcoming gigs\n");
 
   for(const g of gigs){
-    const vName = venueNameById(g.venueId);
-    const timeRange = formatTimeRange(g.startTime, g.endTime);
-    // Determine Steve Watson-Jones share (Person B)
+    const vName = venueNameById(g.venueId);    // Determine Steve Watson-Jones share (Person B)
     const yourShare = g.payoutB;
 
     lines.push(`${isoToDDMMYYYY(g.date)}`);
     lines.push(`${vName}`);
-    if(timeRange) lines.push(`${timeRange}`);
-    lines.push(`Your share: £${yourShare}`);
+        if(g.isFree){
+      lines.push("Free gig");
+    } else {
+      lines.push(`Your share: £${yourShare}`);
+    }
     lines.push(""); // blank line between gigs
   }
 
