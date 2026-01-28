@@ -239,6 +239,7 @@ function setDefaultForm(){
   formTitle.textContent="New gig";
   gigDate.value=todayIso();
   startTime.value=""; endTime.value="";
+  feeType.value="paid"; fee.disabled=false;
   fee.value=""; paymentMethod.value="Cash"; cancelled.value="no"; driver.value="A"; notes.value="";
   useOverrideMiles.checked=false;
   if(state.venues.length) venueSelect.value=state.venues[0].id;
@@ -258,6 +259,8 @@ function loadGigIntoForm(id){
   startTime.value=g.startTime||"";
   endTime.value=g.endTime||"";
   fee.value=g.fee;
+  feeType.value = (g.isFree ? "free" : "paid");
+  fee.disabled = (feeType.value==="free");
   paymentMethod.value=g.paymentMethod||"Cash";
   cancelled.value=g.cancelled?"yes":"no";
   driver.value=g.driverKey||"A";
@@ -280,9 +283,18 @@ function saveGig(){
 
   const ow=Math.max(0,Math.round(Number(oneWayMiles.value||0)));
   const drv=driver.value||"A";
-  const res=calcGig({fee:feeVal, oneWayMiles:ow, driver:drv});
-  const payoutA = res.driverKey==="A" ? res.driverTotalRounded : res.otherTotal;
-  const payoutB = res.driverKey==="B" ? res.driverTotalRounded : res.otherTotal;
+  let res=null;
+  let payoutA=0, payoutB=0;
+  let roundTrip=0, mileagePay=0;
+  let driverKey=drv;
+  if(!isFree){
+    res=calcGig({fee:feeVal, oneWayMiles:ow, driver:drv});
+    roundTrip=res.roundTripMiles;
+    mileagePay=res.mileagePayout;
+    driverKey=res.driverKey;
+    payoutA = res.driverKey==="A" ? res.driverTotalRounded : res.otherTotal;
+    payoutB = res.driverKey==="B" ? res.driverTotalRounded : res.otherTotal;
+  }
 
   const gig={
     isFree: isFree,
@@ -291,16 +303,16 @@ function saveGig(){
     venueId: v.id,
     startTime: startTime.value || "",
     endTime: endTime.value || "",
-    fee: res.fee,
+    fee: feeVal,
     paymentMethod: paymentMethod.value || "Cash",
     cancelled: cancelled.value==="yes",
     notes: (notes.value||"").trim(),
     overrideMiles: useOverrideMiles.checked,
-    oneWayMiles: res.oneWayMiles,
-    roundTripMiles: res.roundTripMiles,
+    oneWayMiles: ow,
+    roundTripMiles: roundTrip,
     mileageRate: SETTINGS.mileageRate,
-    mileagePayout: res.mileagePayout,
-    driverKey: res.driverKey,
+    mileagePayout: mileagePay,
+    driverKey: driverKey,
     payoutA, payoutB,
     updatedAt: Date.now(),
     createdAt: editingGigId ? (state.gigs.find(g=>g.id===editingGigId)?.createdAt || Date.now()) : Date.now(),
