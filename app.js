@@ -141,7 +141,8 @@ function renderUpcoming() {
 function buildWhatsAppMessage() {
   const gigs = state.gigs
     .slice()
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => a.date.localeCompare(b.date));
+
 
   if (!gigs.length) {
     return "Two Sick Steves – Gig list\n\n(No gigs saved)";
