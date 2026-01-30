@@ -37,7 +37,7 @@
       <button id="btnDismissBanner" class="btn btn-secondary" type="button">Dismiss</button>
     </section>
 
-    <section class="card">
+    <section id="homeCard" class="card">
       <div class="row space">
         <h2>Upcoming gigs</h2>
         <button id="btnNewGigTop" class="btn btn-primary" type="button">+ New gig</button>
@@ -46,7 +46,6 @@
       <div class="tiny muted">Shows gigs from <span id="todayLabel"></span> onward. Cancelled gigs are hidden here.</div>
       <div id="upcomingList" class="list"></div>
       <div id="homeHint" class="tiny muted">Editing, venues, duplicates, and history live in Edit.</div>
-      <div class="row space">
 </section>
 
     <div id="manageView" class="hidden">
@@ -68,6 +67,7 @@
       <div id="gigList" class="list"></div>
       <div class="row space">
         <button id="btnClearAll" class="btn btn-danger" type="button">Clear all data</button>
+      </div>
 </section>
 
     <section id="formCard" class="card">

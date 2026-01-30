@@ -169,16 +169,367 @@ function buildWhatsAppMessage() {
   return lines.join("\n").trim();
 }
 
+/* ------------------ UI / Manage view ------------------ */
+
+function showManage(show) {
+  const manage = el("manageView");
+  if (manage) manage.classList.toggle("hidden", !show);
+
+  const homeCard = el("homeCard"); // added in HTML fix
+  if (homeCard) homeCard.classList.toggle("hidden", show);
+
+  // Update button label
+  const btnManage = el("btnManage");
+  if (btnManage) btnManage.textContent = show ? "Home" : "Edit";
+}
+
+function populateVenues() {
+  const sel = el("venueSelect");
+  if (!sel) return;
+
+  sel.innerHTML = "";
+  const venues = [...state.venues].sort((a, b) => a.name.localeCompare(b.name));
+  for (const v of venues) {
+    const opt = document.createElement("option");
+    opt.value = v.id;
+    opt.textContent = v.name;
+    sel.appendChild(opt);
+  }
+}
+
+function renderGigList() {
+  const list = el("gigList");
+  if (!list) return;
+
+  const q = (el("search")?.value || "").trim().toLowerCase();
+  const sort = el("sort")?.value || "dateDesc";
+
+  let gigs = [...state.gigs];
+
+  if (q) {
+    gigs = gigs.filter(g => {
+      const vName = venueNameById(g.venueId).toLowerCase();
+      const notes = (g.notes || "").toLowerCase();
+      return vName.includes(q) || notes.includes(q);
+    });
+  }
+
+  if (sort === "dateAsc") gigs.sort((a, b) => a.date.localeCompare(b.date));
+  if (sort === "dateDesc") gigs.sort((a, b) => b.date.localeCompare(a.date));
+  if (sort === "venueAsc") gigs.sort((a, b) => venueNameById(a.venueId).localeCompare(venueNameById(b.venueId)));
+
+  list.innerHTML = "";
+
+  if (!gigs.length) {
+    list.innerHTML = `<div class="muted tiny">No gigs yet.</div>`;
+    return;
+  }
+
+  for (const g of gigs) {
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <div class="row space">
+        <div>
+          <strong>${isoToDDMMYYYY(g.date)}${g.cancelled ? " (CANCELLED)" : ""}</strong>
+          <div class="tiny muted">${venueNameById(g.venueId)}${g.notes ? " • " + escapeHtml(g.notes) : ""}</div>
+        </div>
+        <button class="btn btn-secondary" type="button" data-edit="${g.id}">Edit</button>
+      </div>
+    `;
+    list.appendChild(row);
+  }
+
+  list.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => startEditGig(btn.getAttribute("data-edit")));
+  });
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function resetForm() {
+  state.ui.editingId = null;
+
+  el("formTitle") && (el("formTitle").textContent = "New gig");
+  if (el("gigDate")) el("gigDate").value = "";
+  if (el("startTime")) el("startTime").value = "";
+  if (el("endTime")) el("endTime").value = "";
+  if (el("feeType")) el("feeType").value = "paid";
+  if (el("fee")) el("fee").value = "";
+  if (el("paymentMethod")) el("paymentMethod").value = "Cash";
+  if (el("cancelled")) el("cancelled").value = "no";
+  if (el("driver")) el("driver").value = "A";
+  if (el("notes")) el("notes").value = "";
+  if (el("useOverrideMiles")) el("useOverrideMiles").checked = false;
+  if (el("oneWayMiles")) el("oneWayMiles").value = "";
+
+  updateCalcUI();
+}
+
+function startEditGig(id) {
+  const g = state.gigs.find(x => x.id === id);
+  if (!g) return;
+
+  state.ui.editingId = id;
+  el("formTitle") && (el("formTitle").textContent = "Edit gig");
+
+  if (el("gigDate")) el("gigDate").value = g.date || "";
+  if (el("venueSelect")) el("venueSelect").value = g.venueId || "";
+  if (el("startTime")) el("startTime").value = g.startTime || "";
+  if (el("endTime")) el("endTime").value = g.endTime || "";
+  if (el("feeType")) el("feeType").value = g.isFree ? "free" : "paid";
+  if (el("fee")) el("fee").value = g.fee ?? "";
+  if (el("paymentMethod")) el("paymentMethod").value = g.paymentMethod || "Cash";
+  if (el("cancelled")) el("cancelled").value = g.cancelled ? "yes" : "no";
+  if (el("driver")) el("driver").value = g.driver || "A";
+  if (el("notes")) el("notes").value = g.notes || "";
+  if (el("useOverrideMiles")) el("useOverrideMiles").checked = !!g.overrideMiles;
+  if (el("oneWayMiles")) el("oneWayMiles").value = (g.overrideMiles ?? g.oneWayMiles ?? "");
+
+  updateCalcUI();
+
+  el("formCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function getSelectedVenue() {
+  const vid = el("venueSelect")?.value;
+  return state.venues.find(v => v.id === vid) || null;
+}
+
+function getOneWayMiles() {
+  const venue = getSelectedVenue();
+  const overrideOn = !!el("useOverrideMiles")?.checked;
+  const overrideVal = parseFloat(el("oneWayMiles")?.value || "");
+  const venueMiles = venue?.miles ?? 0;
+
+  if (overrideOn && Number.isFinite(overrideVal)) return Math.max(0, Math.round(overrideVal));
+  return Math.max(0, Math.round(venueMiles));
+}
+
+function updateCalcUI() {
+  const feeType = el("feeType")?.value || "paid";
+  const fee = parseFloat(el("fee")?.value || "0");
+  const driver = el("driver")?.value || "A";
+  const oneWayMiles = getOneWayMiles();
+
+  const bandPill = el("distanceBandPill");
+  if (bandPill) {
+    const band = SETTINGS.bands.find(b => oneWayMiles >= b.min && oneWayMiles <= b.max);
+    bandPill.textContent = band ? band.name : "—";
+  }
+
+  if (feeType === "free" || !Number.isFinite(fee) || fee <= 0) {
+    el("roundTripMiles") && (el("roundTripMiles").textContent = `${oneWayMiles * 2}`);
+    el("mileagePayout") && (el("mileagePayout").textContent = money(Math.round((oneWayMiles * 2) * SETTINGS.mileageRate)));
+    el("remainingAfterMileage") && (el("remainingAfterMileage").textContent = "—");
+    el("baseSplitRaw") && (el("baseSplitRaw").textContent = "—");
+    el("personAAmount") && (el("personAAmount").textContent = "—");
+    el("personBAmount") && (el("personBAmount").textContent = "—");
+    return;
+  }
+
+  const calc = calcGig({ fee, oneWayMiles, driver });
+
+  el("roundTripMiles") && (el("roundTripMiles").textContent = `${calc.roundTripMiles}`);
+  el("mileagePayout") && (el("mileagePayout").textContent = money(calc.mileagePayout));
+  el("remainingAfterMileage") && (el("remainingAfterMileage").textContent = money(Math.round(fee) - calc.mileagePayout));
+  el("baseSplitRaw") && (el("baseSplitRaw").textContent = money((Math.round(fee) - calc.mileagePayout) / 2));
+
+  el("personALabel") && (el("personALabel").textContent = PEOPLE.A);
+  el("personBLabel") && (el("personBLabel").textContent = PEOPLE.B);
+  el("personAAmount") && (el("personAAmount").textContent = money(calc.payoutA));
+  el("personBAmount") && (el("personBAmount").textContent = money(calc.payoutB));
+}
+
+function saveGigFromForm() {
+  const date = el("gigDate")?.value;
+  const venueId = el("venueSelect")?.value;
+  if (!date || !venueId) {
+    alert("Please choose a date and venue.");
+    return;
+  }
+
+  const isFree = (el("feeType")?.value || "paid") === "free";
+  const fee = isFree ? 0 : Math.max(0, Math.round(parseFloat(el("fee")?.value || "0")));
+  const cancelled = (el("cancelled")?.value || "no") === "yes";
+  const driver = el("driver")?.value || "A";
+  const oneWayMiles = getSelectedVenue()?.miles ?? 0;
+  const overrideMiles = el("useOverrideMiles")?.checked ? getOneWayMiles() : null;
+
+  const calc = (!isFree && fee > 0) ? calcGig({ fee, oneWayMiles: overrideMiles ?? oneWayMiles, driver }) : null;
+
+  const gig = {
+    id: state.ui.editingId || uid(),
+    date,
+    venueId,
+    startTime: el("startTime")?.value || "",
+    endTime: el("endTime")?.value || "",
+    isFree,
+    fee,
+    paymentMethod: el("paymentMethod")?.value || "Cash",
+    cancelled,
+    driver,
+    notes: el("notes")?.value || "",
+    oneWayMiles,
+    overrideMiles,
+    roundTripMiles: calc?.roundTripMiles ?? (getOneWayMiles() * 2),
+    mileagePayout: calc?.mileagePayout ?? Math.round((getOneWayMiles() * 2) * SETTINGS.mileageRate),
+    payoutA: calc?.payoutA ?? 0,
+    payoutB: calc?.payoutB ?? 0,
+  };
+
+  const existingIndex = state.gigs.findIndex(g => g.id === gig.id);
+  if (existingIndex >= 0) state.gigs[existingIndex] = gig;
+  else state.gigs.push(gig);
+
+  saveState();
+  renderUpcoming();
+  renderGigList();
+
+  // Simple "saved" message
+  const msg = el("saveMsg");
+  if (msg) {
+    msg.textContent = "Saved";
+    msg.classList.remove("hidden");
+    setTimeout(() => msg.classList.add("hidden"), 1200);
+  }
+
+  resetForm();
+}
+
+function exportJson() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "tss-gig-calendar.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function importJsonFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result || "{}"));
+      if (!parsed || !Array.isArray(parsed.gigs) || !Array.isArray(parsed.venues)) {
+        alert("That file doesn't look like a valid export.");
+        return;
+      }
+      state.gigs = parsed.gigs;
+      state.venues = parsed.venues;
+      state.ui = parsed.ui || {};
+      saveState();
+      populateVenues();
+      renderUpcoming();
+      renderGigList();
+      resetForm();
+      alert("Import complete.");
+    } catch (e) {
+      alert("Import failed: " + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
 /* ------------------ Events ------------------ */
 
 el("btnShareWhatsApp")?.addEventListener("click", () => {
   const msg = buildWhatsAppMessage();
-  window.open(
-    "https://wa.me/447544147085?text=" + encodeURIComponent(msg),
-    "_blank"
-  );
+  window.open("https://wa.me/447544147085?text=" + encodeURIComponent(msg), "_blank");
+});
+
+el("btnManage")?.addEventListener("click", () => {
+  const showing = !el("manageView")?.classList.contains("hidden");
+  showManage(!showing);
+});
+
+el("btnNewGigTop")?.addEventListener("click", () => {
+  showManage(true);
+  resetForm();
+  el("formCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+el("btnClearForm")?.addEventListener("click", resetForm);
+
+el("btnSaveGig")?.addEventListener("click", saveGigFromForm);
+
+el("search")?.addEventListener("input", renderGigList);
+el("sort")?.addEventListener("change", renderGigList);
+
+["feeType", "fee", "driver", "venueSelect", "useOverrideMiles", "oneWayMiles"].forEach(id => {
+  el(id)?.addEventListener("input", updateCalcUI);
+  el(id)?.addEventListener("change", updateCalcUI);
+});
+
+el("btnExport")?.addEventListener("click", exportJson);
+
+el("btnImport")?.addEventListener("click", () => el("importFile")?.click());
+el("importFile")?.addEventListener("change", e => {
+  const file = e.target.files?.[0];
+  if (file) importJsonFile(file);
+  e.target.value = "";
+});
+
+el("btnClearAll")?.addEventListener("click", () => {
+  if (!confirm("Clear ALL saved data?")) return;
+  state.gigs = [];
+  state.venues = [];
+  state.ui = {};
+  saveState();
+  populateVenues();
+  renderUpcoming();
+  renderGigList();
+  resetForm();
+});
+
+/* ------------------ Venue dialog ------------------ */
+
+el("btnNewVenue")?.addEventListener("click", () => el("venueDialog")?.showModal());
+
+el("btnCancelVenue")?.addEventListener("click", () => el("venueDialog")?.close());
+
+el("venueDialog")?.addEventListener("close", () => {
+  // no-op: form method=dialog handles ok/cancel
+});
+
+document.querySelector("#venueDialog form")?.addEventListener("submit", (e) => {
+  // submit fires for "ok"
+  const name = el("venueName")?.value?.trim();
+  const milesVal = parseFloat(el("venueMiles")?.value || "");
+  if (!name || !Number.isFinite(milesVal)) return;
+
+  const venue = {
+    id: uid(),
+    name,
+    miles: Math.max(0, Math.round(milesVal)),
+    start: el("venueStart")?.value || "",
+    end: el("venueEnd")?.value || "",
+    notes: el("venueNotes")?.value || ""
+  };
+
+  state.venues.push(venue);
+  saveState();
+  populateVenues();
+  if (el("venueSelect")) el("venueSelect").value = venue.id;
+  updateCalcUI();
 });
 
 /* ------------------ Init ------------------ */
 
-renderUpcoming();
+(function init() {
+  // Home widgets
+  renderUpcoming();
+
+  // Manage
+  populateVenues();
+  renderGigList();
+  resetForm();
+
+  // Start on home
+  showManage(false);
+})();
