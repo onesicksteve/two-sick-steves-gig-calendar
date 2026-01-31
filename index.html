@@ -234,6 +234,80 @@
       </div>
 </section>
 
+
+    <section id="debtCard" class="card">
+      <div class="row space">
+        <h2>Debt forecast</h2>
+      </div>
+
+      <div class="tiny muted">Monthly model. Gigs auto-pay Capital One first, then MBNA. Manual payments can target a card.</div>
+
+      <hr class="sep" />
+
+      <h3>Cards</h3>
+      <div class="grid">
+        <div class="box">
+          <label>Capital One balance (£)
+            <input id="capBalance" type="number" inputmode="decimal" />
+          </label>
+          <label>APR %
+            <input id="capApr" type="number" inputmode="decimal" />
+          </label>
+          <label>Min % of balance
+            <input id="capMinPct" type="number" inputmode="decimal" />
+          </label>
+        </div>
+
+        <div class="box">
+          <label>MBNA balance (£)
+            <input id="mbnaBalance" type="number" inputmode="decimal" />
+          </label>
+          <label>APR %
+            <input id="mbnaApr" type="number" inputmode="decimal" />
+          </label>
+          <label>Minimum payment (£)
+            <input id="mbnaMin" type="number" inputmode="decimal" />
+          </label>
+        </div>
+      </div>
+
+      <div class="row actions">
+        <button id="btnSaveDebtSettings" class="btn btn-secondary" type="button">Save card settings</button>
+        <button id="btnRecalcDebt" class="btn btn-primary" type="button">Recalculate</button>
+      </div>
+
+      <hr class="sep" />
+
+      <h3>Add manual payment</h3>
+      <div class="grid">
+        <label>
+          Date
+          <input id="extraPayDate" type="date" />
+        </label>
+        <label>
+          Amount (£)
+          <input id="extraPayAmount" type="number" inputmode="decimal" placeholder="e.g. 50" />
+        </label>
+        <label>
+          Pay which card?
+          <select id="extraPayTarget">
+            <option value="capitalOne">Capital One</option>
+            <option value="mbna">MBNA</option>
+          </select>
+        </label>
+        <label>
+          Note (optional)
+          <input id="extraPayNote" type="text" placeholder="spare cash" />
+        </label>
+      </div>
+
+      <div class="row actions">
+        <button id="btnAddExtraPayment" class="btn btn-primary" type="button">Add payment</button>
+      </div>
+
+      <div id="debtForecast" class="list"></div>
+    </section>
+
 </div>
   </main>
 
@@ -273,6 +347,6 @@
     </form>
   </dialog>
 
- <script src="app.js?v=24"></script>
+ <script src="app.js?v=26"></script>
 </body>
 </html>

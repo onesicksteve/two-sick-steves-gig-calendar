@@ -387,6 +387,7 @@ function saveGigFromForm() {
   saveState();
   renderUpcoming();
   renderGigList();
+  renderDebtForecast();
 
   // Simple "saved" message
   const msg = el("saveMsg");
@@ -427,6 +428,7 @@ function importJsonFile(file) {
       populateVenues();
       renderUpcoming();
       renderGigList();
+  renderDebtForecast();
       resetForm();
       alert("Import complete.");
     } catch (e) {
@@ -435,6 +437,258 @@ function importJsonFile(file) {
   };
   reader.readAsText(file);
 }
+
+
+/* ------------------ Debt forecast ------------------ */
+
+function ensureDebtState() {
+  state.debts ??= {
+    capitalOne: { name: "Capital One", balance: 1389.72, apr: 24, minType: "percent", minValue: 3 },
+    mbna: { name: "MBNA", balance: 4105.74, apr: 24, minType: "fixed", minValue: 181.91 }
+  };
+  state.extraPayments ??= []; // [{id,date,amount,target,note,cancelled,createdAt}]
+  state.debtStartIso ??= todayIso();
+}
+
+function monthKeyFromIso(iso) {
+  return (iso || "").slice(0, 7); // YYYY-MM
+}
+
+function clampMoney(n) {
+  n = Number(n);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100) / 100;
+}
+
+function addMonthlyInterest(balance, apr) {
+  if (balance <= 0) return 0;
+  const r = clampMoney(apr) / 100 / 12; // monthly approx
+  return clampMoney(balance * r);
+}
+
+function computeMinimum(balance, debt) {
+  if (balance <= 0) return 0;
+  if (debt.minType === "fixed") return Math.min(balance, clampMoney(debt.minValue));
+  const pct = clampMoney(debt.minValue);
+  return Math.min(balance, clampMoney((balance * pct) / 100));
+}
+
+function sumGigIncomeByMonth() {
+  const byMonth = {};
+  for (const g of state.gigs || []) {
+    if (!g?.date) continue;
+    if (g.cancelled) continue;
+    if (g.isFree) continue;
+
+    const k = monthKeyFromIso(g.date);
+    const amt = clampMoney(g.payoutA ?? 0); // Steve is always A
+    if (amt <= 0) continue;
+
+    byMonth[k] = (byMonth[k] || 0) + amt;
+  }
+  return byMonth;
+}
+
+function sumExtraPaymentsByMonthAndTarget() {
+  const byMonth = {}; // { "YYYY-MM": { capitalOne: 0, mbna: 0 } }
+
+  for (const p of state.extraPayments || []) {
+    if (!p?.date) continue;
+    if (p.cancelled) continue;
+
+    const k = monthKeyFromIso(p.date);
+    const amt = clampMoney(p.amount ?? 0);
+    if (amt <= 0) continue;
+
+    const t = p.target;
+    if (t !== "capitalOne" && t !== "mbna") continue;
+
+    byMonth[k] ??= { capitalOne: 0, mbna: 0 };
+    byMonth[k][t] = clampMoney(byMonth[k][t] + amt);
+  }
+
+  return byMonth;
+}
+
+function allocateGigs(extra, capBal, mbnaBal) {
+  // Rule: gig money -> Capital One first, then MBNA
+  let capPay = 0;
+  let mbnaPay = 0;
+
+  if (extra > 0 && capBal > 0) {
+    capPay = Math.min(extra, capBal);
+    extra -= capPay;
+  }
+  if (extra > 0 && mbnaBal > 0) {
+    mbnaPay = Math.min(extra, mbnaBal);
+    extra -= mbnaPay;
+  }
+
+  return { capPay: clampMoney(capPay), mbnaPay: clampMoney(mbnaPay) };
+}
+
+function forecastMonthly({ startIso, maxMonths = 240 } = {}) {
+  ensureDebtState();
+
+  const start = (startIso || state.debtStartIso || todayIso()).slice(0, 7); // YYYY-MM
+  const gigByMonth = sumGigIncomeByMonth();
+  const extraByMonth = sumExtraPaymentsByMonthAndTarget();
+
+  const cap = state.debts.capitalOne;
+  const mbn = state.debts.mbna;
+
+  let capBal = clampMoney(cap.balance);
+  let mbnaBal = clampMoney(mbn.balance);
+
+  const rows = [];
+
+  let y = parseInt(start.slice(0, 4), 10);
+  let m = parseInt(start.slice(5, 7), 10); // 1..12
+
+  let capClearMonth = null;
+  let mbnaClearMonth = null;
+
+  for (let i = 0; i < maxMonths; i++) {
+    const key = `${y}-${String(m).padStart(2, "0")}`;
+
+    // interest first (approx)
+    const capInt = addMonthlyInterest(capBal, cap.apr);
+    const mbnaInt = addMonthlyInterest(mbnaBal, mbn.apr);
+    capBal = clampMoney(capBal + capInt);
+    mbnaBal = clampMoney(mbnaBal + mbnaInt);
+
+    // then minimums
+    const capMin = computeMinimum(capBal, cap);
+    const mbnaMin = computeMinimum(mbnaBal, mbn);
+    capBal = clampMoney(capBal - capMin);
+    mbnaBal = clampMoney(mbnaBal - mbnaMin);
+
+    // manual extras (targeted)
+    const targeted = extraByMonth[key] || { capitalOne: 0, mbna: 0 };
+    const capManual = Math.min(clampMoney(targeted.capitalOne), capBal);
+    capBal = clampMoney(capBal - capManual);
+
+    const mbnaManual = Math.min(clampMoney(targeted.mbna), mbnaBal);
+    mbnaBal = clampMoney(mbnaBal - mbnaManual);
+
+    // gigs (auto rule)
+    const gigIncome = clampMoney(gigByMonth[key] || 0);
+    const alloc = allocateGigs(gigIncome, capBal, mbnaBal);
+    capBal = clampMoney(capBal - alloc.capPay);
+    mbnaBal = clampMoney(mbnaBal - alloc.mbnaPay);
+
+    if (!capClearMonth && capBal <= 0.01) capClearMonth = key;
+    if (!mbnaClearMonth && mbnaBal <= 0.01) mbnaClearMonth = key;
+
+    rows.push({
+      month: key,
+      gigIncome,
+      capMin,
+      mbnaMin,
+      capManualExtra: capManual,
+      mbnaManualExtra: mbnaManual,
+      capExtraFromGigs: alloc.capPay,
+      mbnaExtraFromGigs: alloc.mbnaPay,
+      capBalance: Math.max(0, capBal),
+      mbnaBalance: Math.max(0, mbnaBal),
+    });
+
+    if (capBal <= 0.01 && mbnaBal <= 0.01) break;
+
+    m++;
+    if (m === 13) { m = 1; y++; }
+  }
+
+  return { rows, capClearMonth, mbnaClearMonth };
+}
+
+function addExtraPayment({ date, amount, target, note = "" }) {
+  ensureDebtState();
+  const amt = clampMoney(amount);
+  if (!date || amt <= 0) return;
+  if (target !== "capitalOne" && target !== "mbna") return;
+
+  state.extraPayments.push({
+    id: uid(),
+    date,
+    amount: amt,
+    target,
+    note,
+    cancelled: false,
+    createdAt: Date.now()
+  });
+
+  saveState();
+}
+
+function renderDebtForecast() {
+  ensureDebtState();
+
+  const box = el("debtForecast");
+  if (!box) return;
+
+  const out = forecastMonthly();
+  const capDate = out.capClearMonth || "—";
+  const mbnaDate = out.mbnaClearMonth || "—";
+
+  box.innerHTML = `
+    <div class="item">
+      <div class="top">
+        <div>
+          <div class="title">Estimated payoff dates</div>
+          <div class="meta">Monthly approximation. Updates when you add gigs or payments.</div>
+        </div>
+      </div>
+      <div class="nums">
+        <div>Capital One: <strong>${capDate}</strong></div>
+        <div>MBNA: <strong>${mbnaDate}</strong></div>
+      </div>
+    </div>
+  `;
+}
+
+
+function syncDebtInputsToState() {
+  ensureDebtState();
+
+  const cap = state.debts.capitalOne;
+  const mbn = state.debts.mbna;
+
+  const capBalance = parseFloat(el("capBalance")?.value || "");
+  const capApr = parseFloat(el("capApr")?.value || "");
+  const capMinPct = parseFloat(el("capMinPct")?.value || "");
+
+  const mbnaBalance = parseFloat(el("mbnaBalance")?.value || "");
+  const mbnaApr = parseFloat(el("mbnaApr")?.value || "");
+  const mbnaMin = parseFloat(el("mbnaMin")?.value || "");
+
+  if (Number.isFinite(capBalance)) cap.balance = clampMoney(capBalance);
+  if (Number.isFinite(capApr)) cap.apr = clampMoney(capApr);
+  if (Number.isFinite(capMinPct)) { cap.minType = "percent"; cap.minValue = clampMoney(capMinPct); }
+
+  if (Number.isFinite(mbnaBalance)) mbn.balance = clampMoney(mbnaBalance);
+  if (Number.isFinite(mbnaApr)) mbn.apr = clampMoney(mbnaApr);
+  if (Number.isFinite(mbnaMin)) { mbn.minType = "fixed"; mbn.minValue = clampMoney(mbnaMin); }
+
+  saveState();
+}
+
+function syncDebtStateToInputs() {
+  ensureDebtState();
+  const cap = state.debts.capitalOne;
+  const mbn = state.debts.mbna;
+
+  if (el("capBalance")) el("capBalance").value = cap.balance ?? "";
+  if (el("capApr")) el("capApr").value = cap.apr ?? "";
+  if (el("capMinPct")) el("capMinPct").value = cap.minValue ?? "";
+
+  if (el("mbnaBalance")) el("mbnaBalance").value = mbn.balance ?? "";
+  if (el("mbnaApr")) el("mbnaApr").value = mbn.apr ?? "";
+  if (el("mbnaMin")) el("mbnaMin").value = mbn.minValue ?? "";
+
+  if (el("extraPayDate")) el("extraPayDate").value = todayIso();
+}
+
 
 /* ------------------ Events ------------------ */
 
@@ -468,6 +722,31 @@ el("sort")?.addEventListener("change", renderGigList);
 
 el("btnExport")?.addEventListener("click", exportJson);
 
+
+el("btnSaveDebtSettings")?.addEventListener("click", () => {
+  syncDebtInputsToState();
+  renderDebtForecast();
+});
+
+el("btnRecalcDebt")?.addEventListener("click", () => {
+  syncDebtInputsToState();
+  renderDebtForecast();
+});
+
+el("btnAddExtraPayment")?.addEventListener("click", () => {
+  const date = el("extraPayDate")?.value;
+  const amount = parseFloat(el("extraPayAmount")?.value || "0");
+  const target = el("extraPayTarget")?.value;
+  const note = el("extraPayNote")?.value || "";
+
+  addExtraPayment({ date, amount, target, note });
+
+  if (el("extraPayAmount")) el("extraPayAmount").value = "";
+  if (el("extraPayNote")) el("extraPayNote").value = "";
+
+  renderDebtForecast();
+});
+
 el("btnImport")?.addEventListener("click", () => el("importFile")?.click());
 el("importFile")?.addEventListener("change", e => {
   const file = e.target.files?.[0];
@@ -484,6 +763,7 @@ el("btnClearAll")?.addEventListener("click", () => {
   populateVenues();
   renderUpcoming();
   renderGigList();
+  renderDebtForecast();
   resetForm();
 });
 
@@ -528,7 +808,12 @@ document.querySelector("#venueDialog form")?.addEventListener("submit", (e) => {
   // Manage
   populateVenues();
   renderGigList();
+  renderDebtForecast();
   resetForm();
+
+  // Debt
+  syncDebtStateToInputs();
+  renderDebtForecast();
 
   // Start on home
   showManage(false);
